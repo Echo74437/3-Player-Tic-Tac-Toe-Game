@@ -1,0 +1,234 @@
+#include <stdio.h>
+#include <stdbool.h>
+#include <stdlib.h>
+
+// Board size (4x4)
+#define SIZE 4
+
+// Player symbols
+#define UNO_SYMBOL 'X'
+#define TRES_SYMBOL 'O'
+#define EMPTY ' '
+
+// Game state
+char board[SIZE][SIZE];
+bool turn = true;  // true for Uno's turn, false for Dos's turn
+bool go = false;   // additional state variable for turns
+bool over = false;
+
+// Function prototypes
+void setupBoard();
+void showBoard();
+bool placeSymbol(int row, int col);
+bool winnerFound(char symbol);
+bool allPosFilled();
+char fetchResult();
+void clearSymbol(int row, int col);
+
+// Initialize the game board
+void setupBoard() {
+    for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE; j++) {
+            board[i][j] = EMPTY;
+        }
+    }
+    turn = true;
+    go = false;
+    over = false;
+}
+
+// Display the current state of the board
+void showBoard() {
+    printf("\n");
+    printf("   1   2   3   4  \n");
+    printf(" +---+---+---+---+\n");
+    
+    for (int i = 0; i < SIZE; i++) {
+        printf("%d|", i + 1);
+        for (int j = 0; j < SIZE; j++) {
+            printf(" %c |", board[i][j]);
+        }
+        printf("\n");
+        printf(" +---+---+---+---+\n");
+    }
+    
+    printf("\n");
+}
+
+// Make a move according to the game rules
+bool placeSymbol(int row, int col) {
+    // Convert to 0-based indexing
+    row--;
+    col--;
+    
+    // Check if position is valid
+    if (row < 0 || row >= SIZE || col < 0 || col >= SIZE) {
+        printf("Invalid position! Row and column must be between 1 and 4.\n");
+        return false;
+    }
+    
+    // Rule 1: (turn ? go ? pos ? F) ? Uno = Uno ? {pos} ? turn = ¬turn ? go = ¬go
+    if (turn && go && board[row][col] == EMPTY) {
+        board[row][col] = UNO_SYMBOL;
+        turn = !turn;
+        go = !go;
+        printf("Uno placed an X at position (%d,%d)\n", row+1, col+1);
+        return true;
+    }
+    // Rule 2: (¬turn ? pos ? Uno ? Tres) ? Uno = Uno - {pos} ? Tres = Tres - {pos} ? turn = ¬turn
+    else if (!turn && (board[row][col] == UNO_SYMBOL || board[row][col] == TRES_SYMBOL)) {
+        clearSymbol(row, col);
+        turn = !turn;
+        printf("Dos cleared position (%d,%d)\n", row+1, col+1);
+        return true;
+    }
+    // Rule 3: (turn ? ¬go ? pos ? F) ? Tres = Tres ? {pos} ? go = ¬go
+    else if (turn && !go && board[row][col] == EMPTY) {
+        board[row][col] = TRES_SYMBOL;
+        go = !go;
+        printf("Tres placed an O at position (%d,%d)\n", row+1, col+1);
+        return true;
+    } else {
+        printf("Invalid move! Try again.\n");
+        return false;
+    }
+}
+
+// Clear a position on the board
+void clearSymbol(int row, int col) {
+    board[row][col] = EMPTY;
+}
+
+// Check if the current board state results in a win for the given symbol
+bool winnerFound(char symbol) {
+    // Check first row: {(1,1),(1,2),(1,3),(1,4)}
+    if (board[0][0] == symbol && board[0][1] == symbol && 
+        board[0][2] == symbol && board[0][3] == symbol) {
+        return true;
+    }
+    
+    // Check main diagonal: {(1,1),(2,2),(3,3),(4,4)}
+    if (board[0][0] == symbol && board[1][1] == symbol && 
+        board[2][2] == symbol && board[3][3] == symbol) {
+        return true;
+    }
+    
+    // Check anti-diagonal: {(1,4),(2,3),(3,2),(4,1)}
+    if (board[0][3] == symbol && board[1][2] == symbol && 
+        board[2][1] == symbol && board[3][0] == symbol) {
+        return true;
+    }
+    
+    // Check last column: {(4,1),(4,2),(4,3),(4,4)}
+    if (board[3][0] == symbol && board[3][1] == symbol && 
+        board[3][2] == symbol && board[3][3] == symbol) {
+        return true;
+    }
+    
+    return false;
+}
+
+// Check if the board is full (no empty spaces)
+bool allPosFilled() {
+    for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE; j++) {
+            if (board[i][j] == EMPTY) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+// Check the game result based on the rules
+char fetchResult() {
+    // Uno ? W ? result = Uno Wins
+    if (winnerFound(UNO_SYMBOL)) {
+        return 'U'; // Uno wins
+    }
+    
+    // F = Ø ? result = Dos Wins (board is full)
+    if (allPosFilled()) {
+        return 'D'; // Dos wins
+    }
+    
+    // Tres ? W ? result = Tres Wins
+    if (winnerFound(TRES_SYMBOL)) {
+        return 'T'; // Tres wins
+    }
+    
+    return 'N'; // No winner yet
+}
+
+// Check if the game is over
+bool isGameOver() {
+    char result = fetchResult();
+    return result != 'N';
+}
+
+// Display the current game state
+void displayGameState() {
+    printf("\nCurrent Game State:\n");
+   // Print the current turn status
+    if (turn == 1) {
+        printf("Turn: Uno/Tres\n");
+    } else {
+        printf("Turn: Dos\n");
+    }
+
+    // Print the go status
+    if (go == 1) {
+        printf("Go: true (Uno's turn)\n");
+    } else {
+        printf("Go: false (Tres's turn)\n");
+    }
+    if (turn) {
+        printf("Current Player: %s\n", go ? "Uno (X)" : "Tres (O)");
+    } else {
+        printf("Current Player: Dos (clearing a position)\n");
+    }
+}
+
+int main() {
+    int row, col;
+    
+    setupBoard();
+    printf("Welcome to the CCDSTRU game!\n\n");
+    printf("This is a 3-player game on a 4x4 board.\n");
+    printf("- Uno plays X and wins by completing specific patterns\n");
+    printf("- Tres plays O and wins by completing specific patterns\n");
+    printf("- Dos clears positions and wins if the board fills up\n");
+    
+    while (!isGameOver()) {
+        showBoard();
+        displayGameState();
+        
+        printf("\nEnter row and column (1-4): ");
+        scanf("%d %d", &row, &col);
+        
+        if (placeSymbol(row, col)) {
+            // Check if game is over after the move
+            if (isGameOver()) {
+                break;
+            }
+        }
+    }
+    
+    // Display final board and result
+    showBoard();
+    
+    char result = fetchResult();
+    switch (result) {
+        case 'U':
+            printf("\nGame Over! Uno (X) wins!\n");
+            break;
+        case 'D':
+            printf("\nGame Over! Dos wins! (Board is full)\n");
+            break;
+        case 'T':
+            printf("\nGame Over! Tres (O) wins!\n");
+            break;
+    }
+    
+    return 0;
+}
